@@ -1,8 +1,14 @@
+import { useCallback, useState } from 'react';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
+import Prismic from '@prismicio/client';
 import { FiCalendar as CalendarIcon, FiUser as UserIcon } from 'react-icons/fi';
 
 import { getPrismicClient } from '../services/prismic';
+import { formatDate } from '../util/formatDate';
+
+import Header from '../components/Header';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -26,7 +32,33 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
-export default function Home() {
+export default function Home({ postsPagination }: HomeProps) {
+  const [posts, setPosts] = useState<Post[]>(() => postsPagination.results);
+  const [nextPageUrl, setNextPageUrl] = useState<string | null>(
+    () => postsPagination.next_page
+  );
+
+  const handleFetchMorePosts = useCallback(async () => {
+    const response = await fetch(nextPageUrl);
+
+    const data = await response.json();
+
+    const formattedPosts = data.results.map(post => {
+      return {
+        uid: post.uid,
+        first_publication_date: post.first_publication_date,
+        data: {
+          title: post.data.title,
+          subtitle: post.data.subtitle,
+          author: post.data.author,
+        },
+      };
+    });
+
+    setPosts(current => [...current, ...formattedPosts]);
+    setNextPageUrl(data.next_page);
+  }, [nextPageUrl]);
+
   return (
     <>
       <Head>
@@ -34,57 +66,73 @@ export default function Home() {
       </Head>
 
       <main className={`${commonStyles.content} ${styles.content}`}>
+        <Header />
+
         <ul className={styles.postsList}>
-          <li>
-            <h1>Como utilizar Hooks</h1>
+          {posts.map(post => (
+            <Link key={post.uid} href={`/posts/${post.uid}`}>
+              <li>
+                <h1>{post.data.title}</h1>
 
-            <p>Pensando em sincronização de ciclos de vida.</p>
+                <p>{post.data.subtitle}</p>
 
-            <div className={styles.postInfoContainer}>
-              <div>
-                <CalendarIcon />
+                <div className={styles.postInfoContainer}>
+                  <div>
+                    <CalendarIcon />
 
-                <time>15 Mar 2021</time>
-              </div>
+                    <time>{formatDate(post.first_publication_date)}</time>
+                  </div>
 
-              <div>
-                <UserIcon />
+                  <div>
+                    <UserIcon />
 
-                <span>Joseph Oliveira</span>
-              </div>
-            </div>
-          </li>
-
-          <li>
-            <h1>Como utilizar Hooks</h1>
-
-            <p>Pensando em sincronização de ciclos de vida.</p>
-
-            <div className={styles.postInfoContainer}>
-              <div>
-                <CalendarIcon />
-
-                <time>15 Mar 2021</time>
-              </div>
-
-              <div>
-                <UserIcon />
-
-                <span>Joseph Oliveira</span>
-              </div>
-            </div>
-          </li>
+                    <span>{post.data.author}</span>
+                  </div>
+                </div>
+              </li>
+            </Link>
+          ))}
         </ul>
 
-        <button type="button">Carregar mais posts</button>
+        {nextPageUrl && (
+          <button type="button" onClick={handleFetchMorePosts}>
+            Carregar mais posts
+          </button>
+        )}
       </main>
     </>
   );
 }
 
-// export const getStaticProps = async () => {
-//   // const prismic = getPrismicClient();
-//   // const postsResponse = await prismic.query(TODO);
+export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+  const prismic = getPrismicClient();
 
-//   // TODO
-// };
+  const postsResponse = await prismic.query(
+    Prismic.Predicates.at('document.type', 'posts'),
+    {
+      fetch: ['posts.title', 'posts.subtitle', 'posts.author'],
+      pageSize: 5,
+    }
+  );
+
+  const formattedPosts = postsResponse.results.map(post => {
+    return {
+      uid: post.uid,
+      first_publication_date: post.first_publication_date,
+      data: {
+        title: post.data.title,
+        subtitle: post.data.subtitle,
+        author: post.data.author,
+      },
+    };
+  });
+
+  return {
+    props: {
+      postsPagination: {
+        next_page: postsResponse.next_page,
+        results: formattedPosts,
+      },
+    },
+  };
+};
