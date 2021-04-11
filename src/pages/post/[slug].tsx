@@ -8,6 +8,7 @@ import {
   FiClock as ClockIcon,
 } from 'react-icons/fi';
 import { RichText } from 'prismic-dom';
+import Prismic from '@prismicio/client';
 
 import { getPrismicClient } from '../../services/prismic';
 
@@ -121,13 +122,17 @@ export default function Post({ post }: PostProps) {
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
+  const prismic = getPrismicClient();
+
+  const posts = await prismic.query(
+    Prismic.Predicates.at('document.type', 'posts')
+  );
+
   return {
-    paths: [
-      {
-        params: { slug: 'proturbat-feres-requirit-materque-ictibus-elisarum' },
-      },
-    ],
     fallback: true,
+    paths: posts.results.map(post => ({
+      params: { slug: post.uid },
+    })),
   };
 };
 
@@ -138,17 +143,7 @@ export const getStaticProps: GetStaticProps = async context => {
 
   const response = await prismic.getByUID('posts', String(slug), {});
 
-  const post: Post = {
-    first_publication_date: response.first_publication_date,
-    data: {
-      author: response.data.author,
-      banner: response.data.banner,
-      content: response.data.content,
-      title: response.data.title,
-    },
-  };
-
   return {
-    props: { post },
+    props: { post: response },
   };
 };
