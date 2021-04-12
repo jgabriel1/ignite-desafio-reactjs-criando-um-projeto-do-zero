@@ -65,9 +65,9 @@ export default function Home({ postsPagination }: HomeProps) {
         <title>Home | spacetraveling</title>
       </Head>
 
-      <main className={`${commonStyles.content} ${styles.content}`}>
-        <Header />
+      <Header />
 
+      <main className={`${commonStyles.content} ${styles.content}`}>
         <ul className={styles.postsList}>
           {posts.map(post => (
             <Link key={post.uid} href={`/posts/${post.uid}`}>

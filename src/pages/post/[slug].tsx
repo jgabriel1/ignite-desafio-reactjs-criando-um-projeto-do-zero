@@ -10,12 +10,13 @@ import {
 import { RichText } from 'prismic-dom';
 import Prismic from '@prismicio/client';
 
+import Header from '../../components/Header';
 import { getPrismicClient } from '../../services/prismic';
+import { calculateAverageReadTime } from '../../util/calculateAverageReadTime';
+import { formatDate } from '../../util/formatDate';
 
 import commonStyles from '../../styles/common.module.scss';
-import { formatDate } from '../../util/formatDate';
 import styles from './post.module.scss';
-import { calculateAverageReadTime } from '../../util/calculateAverageReadTime';
 
 interface Post {
   first_publication_date: string | null;
@@ -77,6 +78,8 @@ export default function Post({ post }: PostProps) {
       <Head>
         <title>Post | spacetraveling</title>
       </Head>
+
+      <Header />
 
       <img
         src={post.data.banner.url}
